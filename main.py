@@ -218,7 +218,7 @@ if __name__ == '__main__':
 
         # 把章節主題點一點
         resp = click_sections(closeTime = classTime)
-        if resp == 'ALL_WORKS_DONE':
+        if resp != 'TIMES_UP':
             main(closeTime = classTime)
 
         # 關掉當前分頁 防止系統偵測到同時兩個視窗
