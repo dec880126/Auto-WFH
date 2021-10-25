@@ -53,7 +53,6 @@ def getPic_className():
     # 儲存檔案
     im.save("className.jpg")
 
-
 def main(closeTime: int):
     global clickTimes
 
@@ -107,7 +106,7 @@ def main(closeTime: int):
             while True:
                 todo = input('[?]跳過(1)或結束程式(2): ')
                 if todo == '1':
-                    pass
+                    break
                 elif todo == '2':
                     sys.exit()
                 else:
