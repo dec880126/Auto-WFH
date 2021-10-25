@@ -104,59 +104,76 @@ def main(closeTime: int):
                 sys.stdout.flush()
                 time.sleep(1)
         except KeyboardInterrupt:
-            print('已跳過')
+            while True:
+                todo = input('[?]跳過(1)或結束程式(2): ')
+                if todo == '1':
+                    pass
+                elif todo == '2':
+                    sys.exit()
+                else:
+                    print('[!}請重新輸入...')
     
 def click_sections(closeTime):
     x = 495
     y = 420
     # 調整切換章節速度，使軟體行為更像真人
-    timeStep = [random.randint(5, 10) for _ in range(2)] + [random.randint(100, 250 + 5*x) for x in range(1, 30)]
+    timeStep = [random.randint(5, 10) for _ in range(2)] + [random.randint(150, 250 + 5*x) for x in range(1, 15)]*10
     enddingTime = datetime.datetime.now()
     click_delta_y = 40
-    while y < 1950:
-        for step in timeStep:
-            print(f"[*]正在點選章節標題: {y=: 4d}")
-            pyautogui.click(200, 1300)
-            pyautogui.click(x, y)
-            y += click_delta_y
 
-            if y >= 1950:
-                refresh_page()
-                time.sleep(5)
-                getPic_sectionProgress()
-                img = Image.open('sectionProgress.jpg')
+    for idx, step in enumerate(timeStep):
+        print(f"[*]正在點選章節標題: {y=: 4d}")
+        pyautogui.click(200, 1300)
+        pyautogui.click(x, y)
 
-                print("[>]啟動文字辨識引擎")
-                text = pytesseract.image_to_string(img, lang='chi_tra').replace(' ', '').replace('\n', '')
+        if if_read_progess_done():
+            return 'READ_PROGESS_DONE'
 
-                print(f"[*]文字辨識結果: {text}")
+        if y >= 1950:
+            pyautogui.scroll(-1000)
+            y = 1980
+            click_delta_y = -40
 
-                if '已達成' in text:
-                    print('[*]達成章節閱讀目標 ! ')
-                    return
+        if waiting_for_next_click(step, enddingTime, closeTime) == 'TIMES_UP':
+            return 'TIMES_UP'
 
-                print('[*]尚未達成章節閱讀目標 ! ')
-                pyautogui.moveTo(500, 500)
-                pyautogui.scroll(-1000)
-                y, click_delta_y = 1990, -40
-                continue
-            
-            try:
-                for t in range(1, step):
-                    now = datetime.datetime.now()
-                    if (now - enddingTime).seconds == closeTime*60:
-                        print("[*]已達到表定之課程時間 ! ")
-                        return 'timesUp'
-                    print(f"[*]距離下次點擊章節標題還有 {step - t: 2d} 秒\r", end="")
-                    time.sleep(1)
-                    sys.stdout.flush()
-            except KeyboardInterrupt:
-                print('已跳過')
-            print("")
+        y += click_delta_y
+    else:
+        return 'ALL_WORKS_DONE'
 
 def refresh_page():
     pyautogui.click(200, 1300)
     pyautogui.click(183, 81)
+
+
+def if_read_progess_done():
+    getPic_sectionProgress()
+    img = Image.open('sectionProgress.jpg')
+
+    print("[>]啟動文字辨識引擎")
+    text = pytesseract.image_to_string(img, lang='chi_tra').replace(' ', '').replace('\n', '')
+
+    print(f"[*]文字辨識結果: {text}")
+
+    if '已達成' in text:
+        print('[*]達成章節閱讀目標 ! ')
+        return True
+    else:
+        print('[*]尚未達成章節閱讀目標 ! ')
+        return False
+
+def waiting_for_next_click(step, enddingTime, closeTime):
+    try:
+        for t in range(1, step):
+            now = datetime.datetime.now()
+            if (now - enddingTime).seconds == closeTime*60:
+                print("[*]已達到表定之課程時間 ! ")
+                return 'TIMES_UP'
+            print(f"[*]距離下次點擊章節標題還有 {step - t: 2d} 秒\r", end="")
+            time.sleep(1)
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        print('[!]已跳過')
 
 
 if __name__ == '__main__':
@@ -187,19 +204,21 @@ if __name__ == '__main__':
     pyautogui.click(222, 20)
 
     # 課程時數表
-    classTimes = [188, 214, 255, 65]
+    classTimes = [255, 65]
 
     for classTime in classTimes:
         # 點選"上課去"
         pyautogui.click(2042, 1150)
 
         # 等待課程頁面載入
-        print("[*]等待課程頁面載入")
-        time.sleep(5)
+        for t in range(1, 6):
+            print(f"[*]等待課程頁面載入...({t}/5)\r", end='')
+            time.sleep(1)
+            sys.stdout.flush()
 
         # 把章節主題點一點
         resp = click_sections(closeTime = classTime)
-        if resp != 'timesUp':
+        if resp == 'ALL_WORKS_DONE':
             main(closeTime = classTime)
 
         # 關掉當前分頁 防止系統偵測到同時兩個視窗

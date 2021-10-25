@@ -36,6 +36,8 @@
 
 以下述算法生成隨機timeStep，以亂數產生之時間間隔去依序訪問所有章節。
 ```python
+import random
+
 timeStep = [
     random.randint(5, 10) for _ in range(2)
 ] + [
@@ -66,4 +68,30 @@ timeStep = [
 
 ### 版本號: v3
 
-**尚未發現問題**
+問題:
+
+ - 點到`1950`後往回點的邏輯有誤，導致會無限迴圈重新整理頁面。
+
+解決方式:
+
+原因是因為往回點擊的部分程式邏輯有誤，以於v4版本中修正。
+
+優化:
+
+ - 原先之timeStep算法到後期時間間隔過長，故修改為下述算法。
+
+```python
+import random
+
+timeStep = [
+    random.randint(5, 10) for _ in range(2)
+] + [
+    random.randint(150, 250 + 5*x) for x in range(1, 15)
+]*10
+```
+
+> 以上更動更新至v4版本
+
+### 版本號: v4
+
+**測試中**
