@@ -8,7 +8,7 @@ import sys
 import random
 
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-version = 'v3'
+version = 'v4'
 
 def click_1(sleep: int = 2):
     print('[*]滑鼠點擊 上!')
