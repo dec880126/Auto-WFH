@@ -6,19 +6,23 @@ import pytesseract
 import datetime
 import sys
 import random
+from verify import login_process, click2_and_sleep, enter_string
+import webbrowser
 
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-version = 'v4'
+version = 'v5'
 
 def click_1(sleep: int = 2):
     print('[*]滑鼠點擊 上!')
     pyautogui.click(200, 1300)
     time.sleep(sleep)
 
+
 def click_2(sleep: int = 2):
     print('[*]滑鼠點擊 下!')  
     pyautogui.click(200, 1450)
     time.sleep(sleep)
+
 
 def getPic_readTime():
     im = ImageGrab.grab(
@@ -31,6 +35,7 @@ def getPic_readTime():
     # 儲存檔案
     im.save("readTime.jpg")
 
+
 def getPic_sectionProgress():
     im = ImageGrab.grab(
         bbox=(
@@ -42,6 +47,7 @@ def getPic_sectionProgress():
     # 儲存檔案
     im.save("sectionProgress.jpg")
 
+
 def getPic_className():
     im = ImageGrab.grab(
         bbox=(
@@ -52,6 +58,7 @@ def getPic_className():
 
     # 儲存檔案
     im.save("className.jpg")
+
 
 def main(closeTime: int):
     global clickTimes
@@ -112,6 +119,7 @@ def main(closeTime: int):
                 else:
                     print('[!}請重新輸入...')
     
+
 def click_sections(closeTime):
     x = 495
     y = 420
@@ -140,6 +148,7 @@ def click_sections(closeTime):
     else:
         return 'ALL_WORKS_DONE'
 
+
 def refresh_page():
     pyautogui.click(200, 1300)
     pyautogui.click(183, 81)
@@ -161,6 +170,7 @@ def if_read_progess_done():
         print('[*]尚未達成章節閱讀目標 ! ')
         return False
 
+
 def waiting_for_next_click(step, enddingTime, closeTime):
     try:
         for t in range(1, step):
@@ -175,10 +185,19 @@ def waiting_for_next_click(step, enddingTime, closeTime):
         print('[!]已跳過')
 
 
+def print_waiting(text, waitTime):
+    for t in range(1, waitTime+1):
+        print(f"{text}...({t}/{waitTime})\r", end='')
+        time.sleep(1)
+        sys.stdout.flush()
+    else:
+        print('[*]')
+
+
 if __name__ == '__main__':
     clickTimes = 0
     # 2021-10-24 08:00:00
-    target = datetime.datetime.strptime('2021-10-25 08:00:00', '%Y-%m-%d %H:%M:%S')
+    target = datetime.datetime.strptime('2021-10-26 08:00:00', '%Y-%m-%d %H:%M:%S')
 
     print('[*]' + f"線上課程自動掛機外掛".center(50, '='))
     print('[*]' + f"版本號: {version}".center(50))
@@ -187,43 +206,47 @@ if __name__ == '__main__':
         sys.stdout.flush()
         if target < datetime.datetime.now():
             print('[!]已達指定開始時間，程式開始運行 !')
+            click2_and_sleep((3020, 130), 0.1)
+            print_waiting('[*]正在重新整理', 3)
+            pyautogui.click(2006, 188)
+            print_waiting('[*]正在開啟登入畫面', 3)
+            login_process()
+            print_waiting('[*]等待登入過程載入', 5)
             break
         now = datetime.datetime.now()
         timeDelta = target - datetime.datetime.now()
         print(f"[*]現在時間: {now.strftime('%H:%M:%S')}\t距離程式開始還有: {timeDelta}\r", end='')
-        
-        pyautogui.click(200, 1300)
-        pyautogui.click(236, 648)
-        time.sleep(2)
-
-        pyautogui.click(250, 741)
-        time.sleep(5)
-    
-    pyautogui.click(200, 1300)
-    pyautogui.click(222, 20)
 
     # 課程時數表
-    classTimes = [255, 65]
+    # 結構: {classCode: classTime}
+    classInfo = {
+        10001598: 120,
+        10001592: 195,
+        10001565: 180,
+        10001567: 195,
+        10001239: 30
+    }
+    urlBase = 'https://portal.wda.gov.tw/info/'
+    
+    for classCode, classTime in classInfo.items():
+        webbrowser.open_new(urlBase + str(classCode))
 
-    for classTime in classTimes:
+        print_waiting('[*]等待上課去頁面載入', 5)
         # 點選"上課去"
         pyautogui.click(2042, 1150)
 
         # 等待課程頁面載入
-        for t in range(1, 6):
-            print(f"[*]等待課程頁面載入...({t}/5)\r", end='')
-            time.sleep(1)
-            sys.stdout.flush()
+        print_waiting('[*]等待課程頁面載入', 10)
 
         # 把章節主題點一點
         resp = click_sections(closeTime = classTime)
         if resp != 'TIMES_UP':
             main(closeTime = classTime)
+        # print_waiting('[*]模擬上課過程', 5)
 
         # 關掉當前分頁 防止系統偵測到同時兩個視窗
-        pyautogui.click(406, 26)
+        pyautogui.click(764, 24)
         print("[!]關閉分頁")
-        time.sleep(5)
 
     print(f'[*]共點擊了: {clickTimes} 下')
     print('[*]程式結束...')

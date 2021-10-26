@@ -90,9 +90,77 @@ timeStep = [
 ]*10
 ```
 
-> 以上更動更新至v4版本
+> 以上更動更新至v4版本。
 
 ### 版本號: v4
+
+問題:
+
+ - v4版本會出現掛機很久後登入憑證失效，而透過重複動作來避免的做法，實測後發現並不穩定。
+
+解決辦法:
+
+ - 架構重新設計，在每次程式開始時重新登入。
+ - 重新登入遇到的問題與解決辦法:
+   - 登入驗證碼辨識:
+     - `邊緣保留濾波` → `去噪` → `灰化` → `二元化` → `白底黑字` → `辨識`。
+     - 反覆嘗試直到有辨識出值。
+       - 辨識出之值不一定正確，於`辨識錯誤的處理流程`中說明處理方式。
+   - 辨識錯誤的處理流程:
+     - 成功: `開啟課程頁面`。
+     - 失敗: `讀取失敗訊息` → `關掉彈出視窗` → `重新嘗試辨識`。
+   - 第二次嘗試以後:
+     - 帳號欄位會有殘留的值: 以迴圈`pyautogui.press('backspace')`來清除殘值後再重新輸入。
+     - 彈跳出建議的帳號輸入選單: 點擊空白處跳開。
+
+優化:
+
+ - 課程切換架構
+ - 課程載入之等待時間由`5 seconds`提升至`10 seconds`
+
+備註:
+
+ - 彩色驗證碼之辨識程式碼
+
+```python
+import cv2 as cv
+import pytesseract
+import re
+pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+
+# 邊緣保留濾波、去噪
+blur =cv.pyrMeanShiftFiltering(image, sp=8, sr=60)
+
+# 灰化
+gray = cv.cvtColor(blur, cv.COLOR_BGR2GRAY)
+
+# 二元化
+ret, binary = cv.threshold(gray, 0, 255, cv.THRESH_BINARY_INV | cv.THRESH_OTSU)
+
+# 型態操作 獲取結構元素
+kernel = cv.getStructuringElement(cv.MORPH_RECT, (3, 2))
+bin1 = cv.morphologyEx(binary, cv.MORPH_OPEN, kernel)
+kernel = cv.getStructuringElement(cv.MORPH_OPEN, (2, 3))
+bin2 = cv.morphologyEx(bin1, cv.MORPH_OPEN, kernel)
+
+# 變成白底黑字，比較好辨識
+cv.bitwise_not(bin2, bin2)
+
+# 辨識
+test_message = Image.fromarray(bin2)
+text = pytesseract.image_to_string(test_message)
+
+try:
+    text = re.match(r'\d+', text).group()
+except AttributeError:
+    pass
+
+print(text)
+```
+
+> 以上更動更新至v5版本。
+
+### 版本號: v5
 
 
 **測試中**
