@@ -1,6 +1,13 @@
 # WFH-cheating-script
  線上課程自動掛機外掛，包含自動切換章節與防閒置偵測
 
+## Requirement
+
+1. Python == 3.9.7
+2. Pip == 21.3
+3. Run `pip install pyscreenshot pillow pyautogui pyscreenshot pytesseract datetime webbrowser opencv-python` in CLI
+4. Install `tesseract OCR` in [Github: tesseract](https://github.com/UB-Mannheim/tesseract/wiki)
+
 ## Pre-Work
 
 ### 事前配置
