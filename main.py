@@ -70,8 +70,11 @@ def main(closeTime: int):
 
     while True:
         now = datetime.datetime.now()
+        if target_enddingTime < now:
+            sys.exit()
+
         if (now - enddingTime).seconds == closeTime*60:
-            print("[*]已達到表定之課程時間 ! ")
+            print("[*]已達到表定之課程時間 !")
             return
         else:
             print(f"[*]距離表定之課程時間還有: {(now - enddingTime).seconds} 秒 ! ")
@@ -129,6 +132,9 @@ def click_sections(closeTime):
     click_delta_y = 40
 
     for idx, step in enumerate(timeStep):
+        if target_enddingTime < datetime.datetime.now():
+            sys.exit()
+            
         print(f"[*]正在點選章節標題: {y=: 4d}")
         pyautogui.click(200, 1300)
         pyautogui.click(x, y)
@@ -182,7 +188,14 @@ def waiting_for_next_click(step, enddingTime, closeTime):
             time.sleep(1)
             sys.stdout.flush()
     except KeyboardInterrupt:
-        print('[!]已跳過')
+        while True:
+            todo = input('[?]跳過(1)或結束程式(2): ')
+            if todo == '1':
+                break
+            elif todo == '2':
+                sys.exit()
+            else:
+                print('[!}請重新輸入...')
 
 
 def print_waiting(text, waitTime):
@@ -196,8 +209,9 @@ def print_waiting(text, waitTime):
 
 if __name__ == '__main__':
     clickTimes = 0
+    program_startTime = datetime.datetime.now()
     # 2021-10-24 08:00:00
-    target = datetime.datetime.strptime('2021-10-26 08:00:00', '%Y-%m-%d %H:%M:%S')
+    target = datetime.datetime.strptime('2021-10-28 08:00:00', '%Y-%m-%d %H:%M:%S')
 
     print('[*]' + f"線上課程自動掛機外掛".center(50, '='))
     print('[*]' + f"版本號: {version}".center(50))
@@ -216,37 +230,60 @@ if __name__ == '__main__':
         now = datetime.datetime.now()
         timeDelta = target - datetime.datetime.now()
         print(f"[*]現在時間: {now.strftime('%H:%M:%S')}\t距離程式開始還有: {timeDelta}\r", end='')
+        time.sleep(1)
 
     # 課程時數表
     # 結構: {classCode: classTime}
     classInfo = {
-        10001598: 120,
-        10001592: 195,
-        10001565: 180,
-        10001567: 195,
-        10001239: 30
+        10001594: 180,
+        10001460: 60,
+        10001461: 120,
+        10001594: 180,
+        10001480: 120,
+        10002629: 78
     }
     urlBase = 'https://portal.wda.gov.tw/info/'
     
-    for classCode, classTime in classInfo.items():
-        webbrowser.open_new(urlBase + str(classCode))
+    global target_enddingTime
+    target_enddingTime = datetime.datetime.strptime('2021-10-28 20:00:00', '%Y-%m-%d %H:%M:%S')
+    try:
+        class_startTime = datetime.datetime.now()
+        while True:
+            for classCode, classTime in classInfo.items():
+                webbrowser.open_new(urlBase + str(classCode))
 
-        print_waiting('[*]等待上課去頁面載入', 5)
-        # 點選"上課去"
-        pyautogui.click(2042, 1150)
+                print_waiting('[*]等待上課去頁面載入', 5)
+                # 點選"上課去"
+                pyautogui.click(2042, 1150)
 
-        # 等待課程頁面載入
-        print_waiting('[*]等待課程頁面載入', 10)
+                # 等待課程頁面載入
+                print_waiting('[*]等待課程頁面載入', 10)
 
-        # 把章節主題點一點
-        resp = click_sections(closeTime = classTime)
-        if resp != 'TIMES_UP':
-            main(closeTime = classTime)
-        # print_waiting('[*]模擬上課過程', 5)
+                # 把章節主題點一點
+                resp = click_sections(closeTime = classTime)
+                if resp != 'TIMES_UP':
+                    main(closeTime = classTime)
+                # print_waiting('[*]模擬上課過程', 5)
 
-        # 關掉當前分頁 防止系統偵測到同時兩個視窗
-        pyautogui.click(764, 24)
-        print("[!]關閉分頁")
+                # 關掉當前分頁 防止系統偵測到同時兩個視窗
+                pyautogui.click(764, 24)
+                print("[!]關閉分頁")
 
-    print(f'[*]共點擊了: {clickTimes} 下')
-    print('[*]程式結束...')
+            if target_enddingTime < datetime.datetime.now():
+                sys.exit()
+            else:
+                print('[!]尚未達到預設之程式結束時間，將持續進行至設定之程式結束時間到達 ! ')
+    except SystemExit:
+        print('[*]已達設定之結束時間 !')
+    finally:
+        print('[*]' + '程式執行紀錄'.center('=', 50))
+        print(f'[*]總執行時間: {program_startTime - datetime.datetime.now()} ')
+        print(f'[*]總上課時間: {class_startTime - datetime.datetime.now()} ')
+        print(f'[*]共上了: {len(classInfo)} 堂課')
+        for classCode, classTime in classInfo.items():
+            print(f'[*]\t課程代碼: {classCode} -> {classTime} 分鐘')
+        print(f'[*]總閱讀時數: {sum((t for t in classInfo.values()))} ')
+        print(f'[*]一共點擊了: {clickTimes} 下')
+        print('[*]' + ''.center('=', 50))
+        print('[!]提醒: 記得前往網站回報課程進度 !')
+        print('[*]程式結束...')
