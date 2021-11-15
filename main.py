@@ -10,7 +10,7 @@ from verify import login_process, click2_and_sleep, enter_string
 import webbrowser
 
 pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
-version = 'v5'
+version = 'v5.2'
 
 def click_1(sleep: int = 2):
     print('[*]滑鼠點擊 上!')
@@ -207,14 +207,17 @@ def print_waiting(text, waitTime):
         print('[*]')
 
 
-if __name__ == '__main__':
+def check_pos():
+    print(f"[*]解析度: {pyautogui.size()}")
+    print(f"[*]滑鼠位置: {pyautogui.position()}")
+
+def study():
     clickTimes = 0
     program_startTime = datetime.datetime.now()
-    # 2021-10-24 08:00:00
-    target = datetime.datetime.strptime('2021-10-28 08:00:00', '%Y-%m-%d %H:%M:%S')
+    global target_enddingTime
+    target = datetime.datetime.strptime('2021-10-31 08:00:00', '%Y-%m-%d %H:%M:%S')    
+    target_enddingTime = datetime.datetime.strptime('2021-10-31 20:00:00', '%Y-%m-%d %H:%M:%S')
 
-    print('[*]' + f"線上課程自動掛機外掛".center(50, '='))
-    print('[*]' + f"版本號: {version}".center(50))
     print(f"[!]已設定開始時間，正在等待開始...")
     while True:    
         sys.stdout.flush()
@@ -222,7 +225,7 @@ if __name__ == '__main__':
             print('[!]已達指定開始時間，程式開始運行 !')
             click2_and_sleep((3020, 130), 0.1)
             print_waiting('[*]正在重新整理', 3)
-            pyautogui.click(2006, 188)
+            pyautogui.click(2067, 188)
             print_waiting('[*]正在開啟登入畫面', 3)
             login_process()
             print_waiting('[*]等待登入過程載入', 5)
@@ -235,17 +238,13 @@ if __name__ == '__main__':
     # 課程時數表
     # 結構: {classCode: classTime}
     classInfo = {
-        10001594: 180,
-        10001460: 60,
-        10001461: 120,
-        10001594: 180,
-        10001480: 120,
-        10002629: 78
+        10002648: 207,
+        10002650: 158,
+        10002651: 160,
+        10002654: 198
     }
-    urlBase = 'https://portal.wda.gov.tw/info/'
+    urlBase = 'https://portal.wda.gov.tw/info/'    
     
-    global target_enddingTime
-    target_enddingTime = datetime.datetime.strptime('2021-10-28 20:00:00', '%Y-%m-%d %H:%M:%S')
     try:
         class_startTime = datetime.datetime.now()
         while True:
@@ -276,7 +275,7 @@ if __name__ == '__main__':
     except SystemExit:
         print('[*]已達設定之結束時間 !')
     finally:
-        print('[*]' + '程式執行紀錄'.center('=', 50))
+        print('[*]' + '程式執行紀錄'.center(50, '='))
         print(f'[*]總執行時間: {program_startTime - datetime.datetime.now()} ')
         print(f'[*]總上課時間: {class_startTime - datetime.datetime.now()} ')
         print(f'[*]共上了: {len(classInfo)} 堂課')
@@ -284,6 +283,30 @@ if __name__ == '__main__':
             print(f'[*]\t課程代碼: {classCode} -> {classTime} 分鐘')
         print(f'[*]總閱讀時數: {sum((t for t in classInfo.values()))} ')
         print(f'[*]一共點擊了: {clickTimes} 下')
-        print('[*]' + ''.center('=', 50))
+        print('[*]' + ''.center(50, '='))
         print('[!]提醒: 記得前往網站回報課程進度 !')
         print('[*]程式結束...')
+if __name__ == '__main__':
+    while True:
+        print('[*]' + f"線上課程自動掛機外掛".center(50, '='))
+        print('[*]' + f"版本號: {version}".center(50))
+        print('[*]' + ''.center(50, '='))
+        print('[*]' + '\t1. 開始上課')
+        print('[*]' + '\t2. 讀取滑鼠位置')
+        print('[*]' + '\te. 結束程式')
+        print('[*]' + ''.center(50, '='))
+        func_Choose = input('[?]請選取要執行的功能? ')
+
+        if func_Choose == 'e':
+            break
+
+        if func_Choose not in ('1', '2'):
+            print('[!]請輸入正確的編號...')
+            continue
+
+        if func_Choose == '1':
+            study()
+        elif func_Choose == '2':
+            check_pos()
+
+    print('[*]程式結束...')
