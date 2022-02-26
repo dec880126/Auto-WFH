@@ -3,7 +3,7 @@
 # How to use: 
 #     python main.py <num_of_screen_split>
 
-
+import os
 import sys
 import time
 import random
@@ -11,26 +11,43 @@ import datetime
 import pyautogui
 import webbrowser
 import pytesseract
+import configparser
 import pyscreenshot as ImageGrab
 from PIL import Image
-from verify import login_process, click2_and_sleep, enter_string
-from img_process import getPic, recognize_text, is_verifyCode_correct, get_verification
-pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
+from package.tools import *
+from package.verify import login_process, click2_and_sleep, enter_string
+from package.img_process import getPic, is_type_correct, recognize_text, is_verifyCode_correct, get_verification
+from package.initialization import *
 
+
+print(' INITIALIZATION '.center(100, '=')) 
+
+pytesseract.pytesseract.tesseract_cmd = 'C:/Program Files/Tesseract-OCR/tesseract.exe'
 version = '220220'
 _MAIN_RESOLUTION = tuple(pyautogui.size())
 _SCREEN_SPLIT = (1, 4)
+_USERS_PATH = './USERS.ini'
+_IMAGE_PATH = './images/'
 _WINDOWS_TASKBAR_h = 45 # 工作列高度約45~60
 
+try:
+    check_argv(sys.argv, _SCREEN_SPLIT)
 
-if len(sys.argv) == 1:
-    print(f'[!]請輸入使用視窗數量... 可使用的數量: {_SCREEN_SPLIT}')
+    check_images_folder(_IMAGE_PATH)
+
+    check_users_file(_USERS_PATH)
+
+    check_pytesseract(pytesseract.pytesseract.tesseract_cmd)
+except Exception as err_msg:
+    print(err_msg)
+    print(' INTERRUPT '.center(100, '=')) 
+    for _ in range(5):
+        print('↓'.center(100))
     sys.exit()
 
-if int(sys.argv[1]) not in _SCREEN_SPLIT:
-    print(f'[!]請輸入使用視窗數量... 可使用的數量: {_SCREEN_SPLIT}')
-    sys.exit()
-
+print('======='.center(100, '='))
+print('↓'.center(100))
+print('↓'.center(100))
 # ****************************位置像素設定****************************
 # 注意: 以下參數請以1920*1080的解析度，畫面縮放為100%來測量。
 #
@@ -47,6 +64,8 @@ _LOGIN_ACCOUNT_BOX = (570, 451)
 _LOGIN_PWD_BOX = (570, 493)
 # 驗證碼框:   
 _LOGIN_VERIFY_BOX = (570, 566)
+_LOGIN_VERIFY_BOX_POINT_A = (_LOGIN_VERIFY_BOX[0] - 100, _LOGIN_VERIFY_BOX[1] - 20)
+_LOGIN_VERIFY_BOX_POINT_B = (_LOGIN_VERIFY_BOX[0], _LOGIN_VERIFY_BOX[1] + 10)
 # 驗證碼圖左上角: 
 _LOGIN_VERIFY_IMG_POINT_A = (710, 539)
 # 驗證碼圖右下角: 
@@ -76,24 +95,16 @@ _LEARNING_STATUS_POINT_B = (None)
 # ******************************************************************
 
 # 帳號與密碼
-_USERS = [
-    {
-        'account': 'test_1@icloud.com',
-        'password': 'test_test'
-    },
-    {
-        'account': 'test_2@gmail.com',
-        'password': 'test_test'
-    },
-    {
-        'account': 'test_3@gmail.com',
-        'password': 'test_test'
-    },
-    {
-        'account': 'test_4@gmail.com',
-        'password': 'test_test'
-    }
-]
+config = configparser.ConfigParser()    
+config.read(_USERS_PATH, encoding="utf-8")
+_USERS = list()
+for idx in range(4):
+    _USERS.append(
+        {
+            'account': config[f'USER_{idx}']['account'],
+            'password': config[f'USER_{idx}']['password']
+        }
+    )
 
 class Screen():
     def __init__(self, SCREEN_SPLIT, RESOLUTION_X, RESOLUTION_Y) -> None:
@@ -113,10 +124,16 @@ class Screen():
         self.LOGIN_ERROR_MSG_POINT_A = list()
         self.LOGIN_ERROR_MSG_POINT_B = list()
         self.LOGIN_ERROR_CONFIRM = list()
+        self.LOGIN_VERIFY_BOX_POINT_A = list()
+        self.LOGIN_VERIFY_BOX_POINT_B = list()
 
+        print(' INFO SETUP '.center(100, '='))        
         self.set_windows()
         self.set_HP_info(self.SCREEN_SPLIT)
         self.set_LOGIN_info(self.SCREEN_SPLIT)
+        print('=========='.center(100, '='))
+        print('↓'.center(100))
+        print('↓'.center(100))
 
     def set_windows(self):
         if self.SCREEN_SPLIT == 1:
@@ -131,16 +148,16 @@ class Screen():
                 ((0, res[1]/2), (res[0]/2, res[1])),
                 ((res[0]/2, res[1]/2), (res[0], res[1]))
             ]
+        print('Windows Info Set up -> Success!')
 
     def set_HP_info(self, SCREEN_NO = 1):
         for SCREENS in range(SCREEN_NO):
             point_A = self._WINDOWS[SCREENS][0]
             point_B = self._WINDOWS[SCREENS][1]
-            print(f'{point_A}, {point_B}')
             self.HP_BOOKMARK.append((point_A[0] + _HP_BOOKMARK[0], point_A[1] + _HP_BOOKMARK[1]))
             self.HP_LOGIN_BUTTON.append((point_A[0] + (point_B[0] - point_A[0])*_HP_LOGIN_BUTTON[0]/1920, point_A[1] + _HP_LOGIN_BUTTON[1]))
         else:
-            print('[!]Home Page Set up -> Success!')
+            print('Home Page Set up -> Success!')
 
     def set_LOGIN_info(self, SCREEN_NO = 1):
         for SCREENS in range(SCREEN_NO):
@@ -155,25 +172,27 @@ class Screen():
             self.LOGIN_ERROR_MSG_POINT_A.append((point_A[0] + _LOGIN_ERROR_MSG_POINT_A[0], point_A[1] + _LOGIN_ERROR_MSG_POINT_A[1]))
             self.LOGIN_ERROR_MSG_POINT_B.append((point_A[0] + _LOGIN_ERROR_MSG_POINT_B[0], point_A[1] + _LOGIN_ERROR_MSG_POINT_B[1]))
             self.LOGIN_ERROR_CONFIRM.append((point_A[0] + _LOGIN_ERROR_CONFIRM[0], point_A[1] + _LOGIN_ERROR_CONFIRM[1]))
+            self.LOGIN_VERIFY_BOX_POINT_A.append((point_A[0] + _LOGIN_VERIFY_BOX_POINT_A[0], point_A[1] + _LOGIN_VERIFY_BOX_POINT_A[1]))
+            self.LOGIN_VERIFY_BOX_POINT_B.append((point_A[0] + _LOGIN_VERIFY_BOX_POINT_B[0], point_A[1] + _LOGIN_VERIFY_BOX_POINT_B[1]))
         else:
-            print('[!]Login Page Set up -> Success!')
+            print('Login Page Set up -> Success!')
 
     def show(self):
-        print(f'{self._WINDOWS=}')
-        print(f'{self.HP_BOOKMARK=}')
-        print(f'{self.HP_LOGIN_BUTTON=}')
-        print(f'{self.LOGIN_ACCOUNT_BOX=}')
-        print(f'{self.LOGIN_PWD_BOX=}')
-        print(f'{self.LOGIN_VERIFY_BOX=}')
-        print(f'{self.LOGIN_VERIFY_IMG_POINT_A=}')
-        print(f'{self.LOGIN_VERIFY_IMG_POINT_B=}')
-        print(f'{self.LOGIN_COMMIT_BUTTON=}')
+        ATTRS = vars(self)
+        print(' INFOS '.center(100, '='))        
+        for attr in ATTRS:
+            print(f'{attr} = {ATTRS[attr]}')
+        print('======='.center(100, '='))
+        print('↓'.center(100))
+        print('↓'.center(100))
 
     def test(self):
         for i in range(self.SCREEN_SPLIT):
             # if i > len(_USERS)-1: continue
-            self.test_click(self.HP_BOOKMARK[i])
-            self.test_click(self.HP_LOGIN_BUTTON[i])
+            click(self.HP_BOOKMARK[i])
+            print(f'點擊書籤按鈕 {i}')
+            click(self.HP_LOGIN_BUTTON[i])
+            print(f'點擊首頁的登入按鈕 {i}')
             # self.test_click(self.LOGIN_ACCOUNT_BOX[i])
             # pyautogui.press('t')
             # self.test_click(self.LOGIN_PWD_BOX[i])
@@ -189,25 +208,27 @@ class Screen():
         time.sleep(wait)
 
     def login(self):
+        print(' NAVIGATION '.center(100, '='))        
         for _window in range(self.SCREEN_SPLIT):
-            self.test_click(self.HP_BOOKMARK[_window], 0.8)
+            # click(*self.HP_BOOKMARK[_window])
+            print(f'PRESS BOOKMARK BUTTON -> {_window}')
 
         for _window in range(self.SCREEN_SPLIT):
-            self.test_click(self.HP_LOGIN_BUTTON[_window], 0.8)
+            # click(*self.HP_LOGIN_BUTTON[_window])
+            print(f'PRESS LOGIN BUTTON -> {_window}')
 
         for _window in range(self.SCREEN_SPLIT):
             pass
 
+        print('================'.center(100, '='))
+        print('↓'.center(100))
+        print('↓'.center(100))
+        sys.exit()
+
 SCREENS = Screen(int(sys.argv[1]), _MAIN_RESOLUTION[0], _MAIN_RESOLUTION[1])
 SCREENS.show()
 SCREENS.login()
-# SCREENS.login()
 # print(f"[*]滑鼠位置: {pyautogui.position()}")
-
-def click(x, y):
-    CLICK_TIMES = 2
-    for _ in range(CLICK_TIMES):
-        pyautogui.click(x, y)
 
 class Task():
     USERS = _USERS
@@ -234,7 +255,11 @@ class Task():
             # self.login_process(USER, idx)
                 type_account_password(idx)
                 self.verify_code_processing(idx)
-                is_login = is_verifyCode_correct(self.PNG_NAME + f'_{idx}.png', SCREENS.LOGIN_ERROR_MSG_POINT_A[idx], SCREENS.LOGIN_ERROR_MSG_POINT_B[idx])
+                is_login = is_verifyCode_correct(
+                    './images/' + self.PNG_NAME + f'_{idx}.png',
+                    SCREENS.LOGIN_ERROR_MSG_POINT_A[idx],
+                    SCREENS.LOGIN_ERROR_MSG_POINT_B[idx]
+                )
                 if not is_login:
                     click(*SCREENS.LOGIN_ERROR_CONFIRM[idx])
             else:
@@ -244,20 +269,44 @@ class Task():
         pass
     
     def verify_code_processing(self, idx):
-        print(f'{SCREENS.LOGIN_VERIFY_IMG_POINT_A[idx]=}')
-        print(f'{SCREENS.LOGIN_VERIFY_IMG_POINT_B[idx]=}')
-        is_recognize, text = get_verification(save_to=self.PNG_NAME + f'_{idx}', point_A = SCREENS.LOGIN_VERIFY_IMG_POINT_A[idx], point_B = SCREENS.LOGIN_VERIFY_IMG_POINT_B[idx])
+        is_recognize, text = get_verification(
+            save_to = './images/' + self.PNG_NAME + f'_{idx}.png',
+            point_A = SCREENS.LOGIN_VERIFY_IMG_POINT_A[idx],
+            point_B = SCREENS.LOGIN_VERIFY_IMG_POINT_B[idx]
+        )
 
-        print('\n' + '='*20 + '\n')
+        print('\n' + '='*100 + '\n')
         print(f'{is_recognize=}\t{text=}')
-        print('\n' + '='*20 + '\n')
+        print('\n' + '='*100 + '\n')
 
-        click(*SCREENS.LOGIN_VERIFY_BOX[idx])
-        for _ in range(10):
-            pyautogui.press('backspace')
-        enter_string(text)
+        # 輸入驗證碼
+        _is_type_correct = False
+        tries = 0
+        MAX_TRIES = 5
+        while not _is_type_correct:
+            if tries == MAX_TRIES - 1:
+                break
+            else:
+                tries += 1
+
+            click(*SCREENS.LOGIN_VERIFY_BOX[idx])
+            for _ in range(10):
+                pyautogui.press('backspace')
+            enter_string(text)
+            time.sleep(0.2)
+            _is_type_correct = is_type_correct(
+                save_to = './images/' + self.PNG_NAME + f'_{idx}.check.png',
+                point_A = SCREENS.LOGIN_VERIFY_BOX_POINT_A[idx],
+                point_B = SCREENS.LOGIN_VERIFY_BOX_POINT_B[idx],
+                target = text
+            )
         input()
-        # click(*SCREENS.LOGIN_COMMIT_BUTTON[idx])
+
+        # 登入按鈕
+        if input('continue? ') == '':
+            pass
+        else:
+            click(*SCREENS.LOGIN_COMMIT_BUTTON[idx])
         time.sleep(0.5)
 
     def login_process(self, USER: dict, screen_no: int):
@@ -266,7 +315,7 @@ class Task():
         while True:
             print(f"[*]第 {n} 次分析驗證碼")
             n += 1
-            PNG_NAME = 'verify.png'
+            PNG_NAME = './images/verify.png'
             getPic(save_to=PNG_NAME)
 
             import cv2 as cv
